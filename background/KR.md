@@ -8,21 +8,46 @@ Variational Autoencoders (VAE)는 딥러닝과 확률적 그래픽 모델을 결
 
 ## 2. 수학적 배경
 
-### 2.1 생성 과정 (The Generative Process)
+### 2.1 베이즈 정리와 VAE (Bayes' Theorem and VAE)
+베이즈 정리는 사전 지식을 바탕으로 어떤 사건의 확률을 계산하는 방법을 설명합니다. 일반적인 형태는 다음과 같습니다:
+
+$$
+P(A|B) = \frac{P(B|A)P(A)}{P(B)}
+$$
+
+
+VAE의 문맥에서 이 변수들을 다음과 같이 매핑할 수 있습니다:
+*   $A \rightarrow z$ (잠재 변수 / Code)
+*   $B \rightarrow x$ (관측 데이터 / Image)
+
+VAE에 맞춰 베이즈 정리를 다시 쓰면:
+
+$$
+p(z|x) = \frac{p(x|z)p(z)}{p(x)}
+$$
+
+*   **$p(z|x)$ (사후 확률, Posterior)**: 데이터 $x$가 주어졌을 때 잠재 변수 $z$의 확률입니다. 우리가 알아내고자 하는 것(인코더)입니다.
+*   **$p(x|z)$ (우도, Likelihood)**: 잠재 변수 $z$가 주어졌을 때 데이터 $x$의 확률입니다. 이것은 디코더에 해당합니다.
+*   **$p(z)$ (사전 확률, Prior)**: 잠재 변수의 가정된 분포입니다 (보통 표준 정규분포 $\mathcal{N}(0, I)$).
+*   **$p(x)$ (증거, Evidence)**: 데이터 자체의 확률입니다. 이는 $\int p(x|z)p(z)dz$로 계산됩니다.
+
+VAE의 핵심 문제는 분모인 **증거 $p(x)$**가 모든 가능한 $z$에 대한 적분을 포함하고 있어 계산이 불가능(intractable)하다는 점입니다. 이로 인해 사후 확률 $p(z|x)$를 직접 계산할 수 없으며, 이를 해결하기 위해 $p(z|x)$를 $q_\phi(z|x)$로 근사하는 **변분 추론(Variational Inference)** (2.3절)이 등장하게 됩니다.
+
+### 2.2 생성 과정 (The Generative Process)
 우리는 데이터 $x$가 잠재 변수 $z$로부터 다음의 두 단계 과정을 통해 생성된다고 가정합니다:
 1.  사전 분포(prior distribution) $p_\theta(z)$에서 잠재 벡터 $z$를 샘플링합니다. 일반적으로 $p_\theta(z) = \mathcal{N}(0, I)$로 가정합니다.
-2.  부딩 분포(conditional distribution) $p_\theta(x|z)$에서 관측값 $x$를 생성합니다.
+2.  조건부 분포(conditional distribution) $p_\theta(x|z)$에서 관측값 $x$를 생성합니다.
 
 목표는 진정한 사후 분포(true posterior) $p_\theta(z|x)$를 추정하는 것이지만, 증거(evidence) $p_\theta(x) = \int p_\theta(x|z)p_\theta(z)dz$의 적분 계산이 불가능하여 직접 구하는 것은 어렵습니다.
 
-### 2.2 변분 추론 (Variational Inference)
+### 2.3 변분 추론 (Variational Inference)
 이 계산 불가능성을 해결하기 위해 신경망(**인코더**)으로 파라미터화된 근사 사후 분포(approximate posterior) $q_\phi(z|x)$를 도입합니다. 우리는 $q_\phi(z|x)$가 진정한 사후 분포 $p_\theta(z|x)$와 최대한 가까워지기를 원합니다. 이를 위해 두 분포 사이의 쿨백-라이블러(KL) 발산(Kullback-Leibler divergence)을 최소화합니다:
 
 $$
 D_{KL}(q_\phi(z|x) || p_\theta(z|x))
 $$
 
-### 2.3 Evidence Lower Bound (ELBO) 상세 유도
+### 2.4 Evidence Lower Bound (ELBO) 상세 유도
 
 우리의 목표는 데이터 $x$의 우도(Likelihood)인 $p_\theta(x)$를 최대화하는 것입니다. 하지만 $p_\theta(x) = \int p_\theta(x|z)p(z)dz$ 적분은 계산이 불가능(intractable)합니다. 따라서 로그 우도(Log-likelihood)의 하한(Lower Bound)을 최대화하는 방식을 사용합니다.
 
@@ -59,7 +84,7 @@ $$
     - 첫 번째 항: **Reconstruction Error** (데이터를 잘 복원하도록 학습)
     - 두 번째 항: **Regularization** (잠재 변수 $z$의 분포가 사전 분포 $p(z)$와 유사해지도록 학습)
 
-### 2.4 Kullback-Leibler Divergence (KLD)의 비음수성 증명
+### 2.5 Kullback-Leibler Divergence (KLD)의 비음수성 증명
 
 KL Divergence가 항상 0 이상임($D_{KL} \ge 0$)을 젠센 부등식(Jensen's Inequality)을 통해 증명합니다.
 
@@ -83,7 +108,7 @@ KL Divergence가 항상 0 이상임($D_{KL} \ge 0$)을 젠센 부등식(Jensen's
     $$
     따라서, **$D_{KL}(q||p) \ge 0$** 이 성립합니다.
 
-### 2.5 재파라미터화 트릭 (The Reparameterization Trick)
+### 2.6 재파라미터화 트릭 (The Reparameterization Trick)
 경사 하강법을 사용하여 네트워크를 훈련하려면 $z$의 샘플링 과정을 통해 역전파(backpropagate)를 수행해야 합니다. 하지만 샘플링은 미분 불가능한 연산입니다. **재파라미터화 트릭**은 $z$를 무작위 노이즈 변수 $\epsilon$과 인코더 출력($\mu, \sigma$)의 결정론적 변환으로 표현하여 이 문제를 해결합니다:
 
 $$
