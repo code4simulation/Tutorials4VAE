@@ -33,11 +33,9 @@ $$
 *   **$p(x)$ (증거, Evidence)**: 데이터 자체의 확률입니다.
 
 ### 2.2 최대 우도 추정 (Maximum Likelihood Estimation)
-**"왜 우리는 우도(Likelihood)를 최대화해야 할까요?"**
+최대 우도 추정(MLE)은 통계학에서 모델의 파라미터를 추정하는 직관적이고 강력한 방법입니다. 그 핵심 아이디어는 **현재 관측된 데이터가 나올 확률이 가장 높도록 모델의 파라미터를 조정하는 것**입니다.
 
-최대 우도 추정(MLE)은 통계학에서 모델의 파라미터를 추정하는 가장 직관적이고 강력한 방법입니다. 그 핵심 아이디어는 **현재 관측된 데이터가 나올 확률이 가장 높도록 모델의 파라미터를 조정하는 것**입니다.
-
-생성 모델(Generative Model)의 궁극적인 목표는 우리가 가진 데이터셋(예: MNIST 숫자 이미지)의 분포를 모델이 학습하는 것입니다. 만약 모델이 데이터의 분포 $p_\theta(x)$를 완벽하게 학습한다면, 모델은 실제 데이터와 구별할 수 없는 새로운 샘플을 생성할 수 있습니다.
+생성 모델(Generative Model)의 궁극적인 목표는 데이터셋(예: MNIST 숫자 이미지)의 분포를 모델이 학습하는 것입니다. 만약 모델이 데이터의 분포 $p_\theta(x)$를 완벽하게 학습한다면, 모델은 실제 데이터와 구별할 수 없는 새로운 샘플을 생성할 수 있습니다.
 
 수식으로 표현하면, 관측된 데이터 $x$에 대해 $p_\theta(x)$를 최대화하는 파라미터 $\theta$를 찾는 것입니다:
 
@@ -47,16 +45,17 @@ $$
 
 이 값이 최대가 될 때, 모델은 실제 데이터 분포와 가장 유사해집니다 (수학적으로는 실제 분포와 모델 분포 사이의 KL Divergence를 최소화하는 것과 같습니다).
 
-하지만 **VAE와 같은 잠재 변수 모델(Latent Variable Model)에서는 문제가 있습니다.**
-$p_\theta(x)$를 계산하려면 모든 가능한 잠재 변수 $z$에 대해 적분해야 하는데($p_\theta(x) = \int p_\theta(x|z)p(z)dz$), 이 적분 계산이 불가능(intractable)합니다. 따라서 우리는 우도를 직접 최대화하는 대신, 우도의 **하한(Lower Bound, ELBO)**을 최대화하는 우회적인 방법을 사용하게 됩니다.
+하지만 **VAE와 같은 잠재 변수 모델(Latent Variable Model)에서는 문제가 존재합니다.**
+$p_\theta(x)$를 계산하려면 모든 가능한 잠재 변수 $z$에 대해 적분해야 하는데($p_\theta(x) = \int p_\theta(x|z)p(z)dz$), 이 적분 계산이 불가능(intractable)합니다. 따라서 우도를 직접 최대화하는 대신, 우도의 **하한(Lower Bound, ELBO)**을 최대화하는 우회적인 방법을 사용합니다.
 
 ### 2.3 쿨백-라이블러 발산 (Kullback-Leibler Divergence, KLD)
 두 확률 분포 $q(x)$와 $p(x)$가 얼마나 다른지를 측정하는 지표입니다. VAE에서는 근사 분포 $q$와 실제 분포 $p$ 사이의 차이를 줄이는 데 사용됩니다.
 
 **정의:**
 $$
-D_{KL}(q \parallel p) = \mathbb{E}_q \left[ \log \frac{q(x)}{p(x)} \right] = \int q(x) \log \frac{q(x)}{p(x)} dx
+D_{KL}(q||p) = \int q(x) \log \frac{q(x)}{p(x)} dx = \mathbb{E}_{x \sim q(x)} \left[ \log \frac{q(x)}{p(x)} \right]
 $$
+*(여기서 적분 $\int q(x) (...) dx$는 확률 분포 $q(x)$에 대한 기댓값 $\mathbb{E}_q[...]$과 동일합니다)*
 
 **젠센 부등식 (Jensen's Inequality) 이란?**
 젠센 부등식은 볼록 함수(convex function)의 기댓값과 기댓값의 함수값 사이의 관계를 나타냅니다.
@@ -89,14 +88,14 @@ VAE는 데이터 $x$가 잠재 변수 $z$로부터 생성된다고 가정합니�
 계산 불가능한 $p_\theta(z|x)$ 대신, 다루기 쉬운 근사 분포 $q_\phi(z|x)$(인코더)를 도입합니다. 목표는 $q_\phi$를 $p_\theta$에 최대한 가깝게 만드는 것, 즉 $D_{KL}(q_\phi || p_\theta)$를 최소화하는 것입니다.
 
 ### 2.6 Evidence Lower Bound (ELBO) 상세 유도
-우리는 $\log p_\theta(x)$를 최대화하고 싶습니다. 식을 변형해 봅시다.
+우리는 $\log p_\theta(x)$를 최대화하는 것을 목표로 합니다. 이를 위해 식을 다음과 같이 변형할 수 있습니다.
 
 $$
 \begin{aligned}
 \log p_\theta(x) &= \log \int p_\theta(x, z) dz \\
 &= \log \int p_\theta(x, z) \frac{q_\phi(z|x)}{q_\phi(z|x)} dz \\
-&= \log \mathbb{E}_{q_\phi} \left[ \frac{p_\theta(x, z)}{q_\phi(z|x)} \right] \\
-&\ge \mathbb{E}_{q_\phi} \left[ \log \frac{p_\theta(x, z)}{q_\phi(z|x)} \right] \quad (\text{Jensen Inequality}) \\
+&= \log \mathbb{E}_{z \sim q_\phi(z|x)} \left[ \frac{p_\theta(x, z)}{q_\phi(z|x)} \right] \quad (\text{적분을 기댓값으로 변환}) \\
+&\ge \mathbb{E}_{z \sim q_\phi(z|x)} \left[ \log \frac{p_\theta(x, z)}{q_\phi(z|x)} \right] \quad (\text{Jensen Inequality}) \\
 &= \text{ELBO}
 \end{aligned}
 $$
@@ -124,17 +123,17 @@ $$
 
 ### 2.7 재파라미터화 트릭 (The Reparameterization Trick)
 
-**"왜 우리는 단순히 $z$를 샘플링할 수 없을까요?"**
+**샘플링의 문제점**
 
-VAE의 인코더는 평균 $\mu$와 분산 $\sigma^2$를 출력합니다. 그리고 우리는 이 분포 $\mathcal{N}(\mu, \sigma^2)$에서 잠재 변수 $z$를 샘플링하여 디코더에 전달합니다.
+VAE의 인코더는 평균 $\mu$와 분산 $\sigma^2$를 출력합니다. 그리고 이 분포 $\mathcal{N}(\mu, \sigma^2)$에서 잠재 변수 $z$를 샘플링하여 디코더에 전달합니다.
 문제는 **"샘플링(Sampling)"**이라는 과정 자체가 미분이 불가능한(non-differentiable) 무작위 연산이라는 점입니다.
 
 신경망을 학습시키려면 오차 역전파(Backpropagation)를 통해 경사(Gradient)가 흘러가야 합니다. 하지만 $z$가 무작위로 뽑힌 값이라면, 이 무작위 노드를 통과해서 인코더의 파라미터($\phi$)로 미분값을 전달할 수 없습니다. 즉, 체인 룰(Chain Rule)이 끊기게 됩니다.
 
-**해결책: 무작위성을 분리하자!**
+**해결책: 무작위성의 분리**
 
 재파라미터화 트릭의 핵심 아이디어는 **$z$를 결정론적(deterministic) 부분과 확률적(stochastic) 부분으로 분리하는 것**입니다.
-우리는 $z$를 직접 샘플링하는 대신, 외부에서 무작위 노이즈 $\epsilon$을 주입하여 $z$를 생성합니다.
+$z$를 직접 샘플링하는 대신, 외부에서 무작위 노이즈 $\epsilon$을 주입하여 $z$를 생성합니다.
 
 $$
 z = \mu + \sigma \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
