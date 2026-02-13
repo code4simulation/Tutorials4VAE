@@ -34,7 +34,7 @@ $$
 *   **$p(x)$ (증거, Evidence)**: 데이터 자체의 확률입니다.
 
 ### 2.2 최대 우도 추정 (Maximum Likelihood Estimation)
-최대 우도 추정(MLE)은 통계학에서 모델의 파라미터를 추정하는 직관적이고 강력한 방법입니다. 그 핵심 아이디어는 **현재 관측된 데이터가 나올 확률이 가장 높도록 모델의 파라미터를 조정하는 것**입니다. 생성 모델(Generative Model)의 궁극적인 목표는 데이터셋(예: MNIST 숫자 이미지)의 분포를 모델이 학습하는 것입니다. 만약 모델이 데이터의 분포 $p_\theta(x)$를 완벽하게 학습한다면, 모델은 실제 데이터와 구별할 수 없는 새로운 샘플을 생성할 수 있습니다.
+최대 우도 추정은 통계학에서 모델의 파라미터를 추정하는 직관적이고 강력한 방법입니다. 그 핵심 아이디어는 **현재 관측된 데이터가 나올 확률이 가장 높도록 모델의 파라미터를 조정하는 것**입니다. 생성 모델의 궁극적인 목표는 데이터셋(예: MNIST 숫자 이미지)의 분포를 모델이 학습하는 것입니다. 만약 모델이 데이터의 분포 $p_\theta(x)$를 완벽하게 학습한다면, 모델은 실제 데이터와 구별할 수 없는 새로운 샘플을 생성할 수 있습니다.
 
 수식으로 표현하면, 관측된 데이터 $x$에 대해 $p_\theta(x)$를 최대화하는 파라미터 $\theta$를 찾는 것입니다:
 
@@ -49,19 +49,23 @@ $$
 이 값이 최대가 될 때, 모델은 실제 데이터 분포와 가장 유사해집니다. 수학적으로는 실제 분포와 모델 분포 사이의 KL Divergence를 최소화하는 것과 같습니다.
 
 하지만 **VAE와 같은 잠재 변수 모델(Latent Variable Model)에서는 문제가 존재합니다.**
-$p_\theta(x)$를 계산하려면 모든 가능한 잠재 변수 $z$에 대해 적분해야 하는데($p_\theta(x) = \int p_\theta(x|z)p(z)dz$), 이 적분 계산이 불가능(intractable)합니다. 따라서 우도를 직접 최대화하는 대신, 우도의 **하한(Lower Bound, ELBO)**을 최대화하는 우회적인 방법을 사용합니다.
+$p_\theta(x)$를 계산하려면 모든 가능한 잠재 변수 $z$에 대해 적분해야 하는데 ($p_\theta(x) = \int p_\theta(x|z)p(z)dz$), 이 적분 계산이 불가능(intractable)합니다. 따라서 우도를 직접 최대화하는 대신, 우도의 **하한(Lower Bound, ELBO)**을 최대화하는 우회적인 방법을 사용합니다.
 
 ### 2.3 쿨백-라이블러 발산 (Kullback-Leibler Divergence, KLD)
 두 확률 분포 $q(x)$와 $p(x)$가 얼마나 다른지를 측정하는 지표입니다. VAE에서는 근사 분포 $q$와 실제 분포 $p$ 사이의 차이를 줄이는 데 사용됩니다.
 
 **정의:**
+
 $$
-D_{KL}(q||p) = \int q(x) \log \frac{q(x)}{p(x)} dx = \mathbb{E}_{x \sim q(x)} \left[ \log \frac{q(x)}{p(x)} \right]
+D_{KL}(q \parallel p) = \int q(x) \log \frac{q(x)}{p(x)} dx = \mathbb{E}_{x \sim q(x)} \left[ \log \frac{q(x)}{p(x)} \right]
 $$
-*(여기서 적분 $\int q(x) (...) dx$는 확률 분포 $q(x)$에 대한 기댓값 $\mathbb{E}_q[...]$과 동일합니다)*
+
+(여기서 적분 $\int q(x) (...) dx$는 확률 분포 $q(x)$에 대한 기댓값 $\mathbb{E}_q[...] $와 동일합니다)
 
 **젠센 부등식 (Jensen's Inequality) 이란?**
+
 젠센 부등식은 볼록 함수(convex function)의 기댓값과 기댓값의 함수값 사이의 관계를 나타냅니다.
+
 *   함수 $f(x)$가 **볼록(convex)**할 때: $\mathbb{E}[f(x)] \ge f(\mathbb{E}[x])$
 *   함수 $f(x)$가 **오목(concave)**할 때: $\mathbb{E}[f(x)] \le f(\mathbb{E}[x])$
 
@@ -72,7 +76,7 @@ $D_{KL}$은 항상 0 이상입니다. ($-\log$는 볼록 함수)
 
 $$
 \begin{aligned}
-D_{KL}(q||p) &= \mathbb{E}_q \left[ -\log \frac{p(x)}{q(x)} \right] \\
+D_{KL}(q \parallel p) &= \mathbb{E}_q \left[ -\log \frac{p(x)}{q(x)} \right] \\
 &\ge -\log \left( \mathbb{E}_q \left[ \frac{p(x)}{q(x)} \right] \right) \quad (\text{Jensen Inequality}) \\
 &= -\log \left( \int q(x) \frac{p(x)}{q(x)} dx \right) \\
 &= -\log \left( \int p(x) dx \right) \\
@@ -88,7 +92,7 @@ VAE는 데이터 $x$가 잠재 변수 $z$로부터 생성된다고 가정합니�
 우리는 $p_\theta(z|x)$를 알고 싶지만, 앞서 언급했듯 $p(x)$를 구할 수 없어 계산이 불가능합니다.
 
 ### 2.5 변분 추론 (Variational Inference)
-계산 불가능한 $p_\theta(z|x)$ 대신, 다루기 쉬운 근사 분포 $q_\phi(z|x)$(인코더)를 도입합니다. 목표는 $q_\phi$를 $p_\theta$에 최대한 가깝게 만드는 것, 즉 $D_{KL}(q_\phi || p_\theta)$를 최소화하는 것입니다.
+계산 불가능한 $p_\theta(z|x)$ 대신, 다루기 쉬운 근사 분포 $q_\phi(z|x)$ (인코더)를 도입합니다. 목표는 $q_\phi$를 $p_\theta$에 최대한 가깝게 만드는 것, 즉 $D_{KL}(q_\phi \parallel p_\theta)$를 최소화하는 것입니다.
 
 ### 2.6 Evidence Lower Bound (ELBO) 상세 유도
 우리는 $\log p_\theta(x)$를 최대화하는 것을 목표로 합니다. 이를 위해 식을 다음과 같이 변형할 수 있습니다.
@@ -118,7 +122,7 @@ $$
 $$
 \begin{aligned}
 \text{ELBO} &= \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z) + \log p(z) - \log q_\phi(z|x)] \\
-&= \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - D_{KL}(q_\phi(z|x) || p(z))
+&= \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - D_{KL}(q_\phi(z|x) \parallel p(z))
 \end{aligned}
 $$
 *   첫 번째 항: **Reconstruction Error**
