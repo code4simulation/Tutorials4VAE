@@ -35,7 +35,7 @@ $$
 ### 2.2 최대 우도 추정 (Maximum Likelihood Estimation)
 **"왜 우리는 우도(Likelihood)를 최대화해야 할까요?"**
 
-최대 우도 추정(MLE)은 통계학에서 모델의 파라미터를 추정하는 가장 직관적이고 강력한 방법입니다. 그 핵심 아이디어는 **"현재 관측된 데이터가 나올 확률이 가장 높도록 모델의 파라미터를 조정하는 것"**입니다.
+최대 우도 추정(MLE)은 통계학에서 모델의 파라미터를 추정하는 가장 직관적이고 강력한 방법입니다. 그 핵심 아이디어는 **현재 관측된 데이터가 나올 확률이 가장 높도록 모델의 파라미터를 조정하는 것**입니다.
 
 생성 모델(Generative Model)의 궁극적인 목표는 우리가 가진 데이터셋(예: MNIST 숫자 이미지)의 분포를 모델이 학습하는 것입니다. 만약 모델이 데이터의 분포 $p_\theta(x)$를 완벽하게 학습한다면, 모델은 실제 데이터와 구별할 수 없는 새로운 샘플을 생성할 수 있습니다.
 
@@ -63,14 +63,14 @@ $$
 *   함수 $f(x)$가 **볼록(convex)**할 때: $\mathbb{E}[f(x)] \ge f(\mathbb{E}[x])$
 *   함수 $f(x)$가 **오목(concave)**할 때: $\mathbb{E}[f(x)] \le f(\mathbb{E}[x])$
 
-여기서 우리는 $-\log(x)$ 함수를 사용합니다. 로그 함수($\log x$)는 오목 함수이지만, 마이너스가 붙은 $-\log x$는 아래로 볼록한 **볼록 함수**입니다. 따라서 젠센 부등식을 적용할 수 있습니다.
+여기서 우리는 $-\log(x)$ 함수를 사용합니다. 로그 함수는 오목 함수이지만, 마이너스가 붙은 $-\log x$는 아래로 볼록한 **볼록 함수**입니다. 따라서 젠센 부등식을 적용할 수 있습니다.
 
 **비음수성 증명:**
 $D_{KL}$은 항상 0 이상입니다. ($-\log$는 볼록 함수)
 
 $$
 \begin{aligned}
-D_{KL}(q \parallel p) &= \mathbb{E}_q \left[ -\log \frac{p(x)}{q(x)} \right] \\
+D_{KL}(q||p) &= \mathbb{E}_q \left[ -\log \frac{p(x)}{q(x)} \right] \\
 &\ge -\log \left( \mathbb{E}_q \left[ \frac{p(x)}{q(x)} \right] \right) \quad (\text{Jensen Inequality}) \\
 &= -\log \left( \int q(x) \frac{p(x)}{q(x)} dx \right) \\
 &= -\log \left( \int p(x) dx \right) \\
@@ -123,13 +123,29 @@ $$
 *   두 번째 항: **Regularization** (Prior $p(z)$와 $q_\phi$의 차이)
 
 ### 2.7 재파라미터화 트릭 (The Reparameterization Trick)
-Backpropagation을 가능하게 하기 위해, 무작위성을 입력 레이어로 분리합니다.
+
+**"왜 우리는 단순히 $z$를 샘플링할 수 없을까요?"**
+
+VAE의 인코더는 평균 $\mu$와 분산 $\sigma^2$를 출력합니다. 그리고 우리는 이 분포 $\mathcal{N}(\mu, \sigma^2)$에서 잠재 변수 $z$를 샘플링하여 디코더에 전달합니다.
+문제는 **"샘플링(Sampling)"**이라는 과정 자체가 미분이 불가능한(non-differentiable) 무작위 연산이라는 점입니다.
+
+신경망을 학습시키려면 오차 역전파(Backpropagation)를 통해 경사(Gradient)가 흘러가야 합니다. 하지만 $z$가 무작위로 뽑힌 값이라면, 이 무작위 노드를 통과해서 인코더의 파라미터($\phi$)로 미분값을 전달할 수 없습니다. 즉, 체인 룰(Chain Rule)이 끊기게 됩니다.
+
+**해결책: 무작위성을 분리하자!**
+
+재파라미터화 트릭의 핵심 아이디어는 **$z$를 결정론적(deterministic) 부분과 확률적(stochastic) 부분으로 분리하는 것**입니다.
+우리는 $z$를 직접 샘플링하는 대신, 외부에서 무작위 노이즈 $\epsilon$을 주입하여 $z$를 생성합니다.
 
 $$
 z = \mu + \sigma \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
 $$
 
-이제 $z$는 $\mu$와 $\sigma$에 대한 결정론적 함수가 되어 미분이 가능해집니다.
+여기서:
+*   $\mu, \sigma$: 인코더(신경망)의 출력 (결정론적, 미분 가능)
+*   $\epsilon$: 표준 정규분포에서 샘플링한 노이즈 (상수 취급, 미분 불필요)
+*   $\odot$: 요소별 곱 (Element-wise product)
+
+이제 $z$는 $\mu$와 $\sigma$에 대한 **함수**가 되었습니다. 따라서 $z$를 $\mu$와 $\sigma$로 미분할 수 있게 되었고($\frac{\partial z}{\partial \mu}=1, \frac{\partial z}{\partial \sigma}=\epsilon$), 역전파가 인코더까지 막힘없이 흐를 수 있게 됩니다. 이것이 VAE 학습을 가능하게 하는 핵심 테크닉입니다.
 
 ## 3. PyTorch 구현 및 분석
 
