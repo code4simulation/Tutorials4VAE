@@ -66,8 +66,8 @@ $$
 
 젠센 부등식은 볼록 함수(convex function)의 기댓값과 기댓값의 함수값 사이의 관계를 나타냅니다.
 
-*   함수 $f(x)$가 **볼록(convex)**할 때: $\mathbb{E}[f(x)] \ge f(\mathbb{E}[x])$
-*   함수 $f(x)$가 **오목(concave)**할 때: $\mathbb{E}[f(x)] \le f(\mathbb{E}[x])$
+*   함수 $f(x)$ 가 **볼록(convex)** 할 때 : $\mathbb{E}[f(x)] \ge f(\mathbb{E}[x])$
+*   함수 $f(x)$ 가 **오목(concave)** 할 때 : $\mathbb{E}[f(x)] \le f(\mathbb{E}[x])$
 
 여기서 우리는 $-\log(x)$ 함수를 사용합니다. 로그 함수는 오목 함수이지만, 마이너스가 붙은 $-\log x$는 아래로 볼록한 **볼록 함수**입니다. 따라서 젠센 부등식을 적용할 수 있습니다.
 
