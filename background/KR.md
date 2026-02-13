@@ -57,7 +57,7 @@ $p_\theta(x)$를 계산하려면 모든 가능한 잠재 변수 $z$에 대해 �
 **정의:**
 
 $$
-D_{KL}(q \parallel p) = \int q(x) \log \frac{q(x)}{p(x)} dx = \mathbb{E}_{x \sim q(x)} \left[ \log \frac{q(x)}{p(x)} \right]
+D_{KL}(q \parallel p) = \int q(x) \log \frac{q(x)}{p(x)} dx = \mathbb{E}_{q} \left[ \log \frac{q(x)}{p(x)} \right]
 $$
 
 (여기서 적분 $\int q(x) (...) dx$는 확률 분포 $q(x)$에 대한 기댓값 $\mathbb{E}_q[...] $와 동일합니다)
@@ -83,6 +83,8 @@ D_{KL}(q \parallel p) &= \mathbb{E}_q \left[ -\log \frac{p(x)}{q(x)} \right] \\
 &= -\log(1) = 0
 \end{aligned}
 $$
+
+위 유도 과정의 마지막 단계에서 $\int p(x) dx = 1$이 되는 것은 확률 밀도 함수(Probability Density Function, PDF)가 갖는 핵심적인 성질인 **정규화 조건(Normalization Condition)**에 기인합니다. 확률은 표본 공간 내에서 발생 가능한 모든 사건의 상대적 빈도를 0과 1 사이의 값으로 정의한 것이며, "전체 표본 공간 내에서 어떤 사건이든 하나는 반드시 일어난다"는 공리에 따라 모든 가능한 결과에 대한 확률의 총합(또는 적분)은 반드시 1이 되어야 합니다. 따라서 $p(x)$가 유효한 확률 분포를 따른다면, 그 형태와 관계없이 전 구간에 대한 적분값은 항상 1로 수렴하게 됩니다.
 
 ### 2.4 생성 과정 (The Generative Process)
 VAE는 데이터 $x$가 잠재 변수 $z$로부터 생성된다고 가정합니다:
