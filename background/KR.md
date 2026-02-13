@@ -55,16 +55,23 @@ $p_\theta(x)$를 계산하려면 모든 가능한 잠재 변수 $z$에 대해 �
 
 **정의:**
 $$
-D_{KL}(q||p) = \mathbb{E}_q \left[ \log \frac{q(x)}{p(x)} \right] = \int q(x) \log \frac{q(x)}{p(x)} dx
+D_{KL}(q \parallel p) = \mathbb{E}_q \left[ \log \frac{q(x)}{p(x)} \right] = \int q(x) \log \frac{q(x)}{p(x)} dx
 $$
 
-**비음수성 증명 (Jensen's Inequality 사용):**
+**젠센 부등식 (Jensen's Inequality) 이란?**
+젠센 부등식은 볼록 함수(convex function)의 기댓값과 기댓값의 함수값 사이의 관계를 나타냅니다.
+*   함수 $f(x)$가 **볼록(convex)**할 때: $\mathbb{E}[f(x)] \ge f(\mathbb{E}[x])$
+*   함수 $f(x)$가 **오목(concave)**할 때: $\mathbb{E}[f(x)] \le f(\mathbb{E}[x])$
+
+여기서 우리는 $-\log(x)$ 함수를 사용합니다. 로그 함수($\log x$)는 오목 함수이지만, 마이너스가 붙은 $-\log x$는 아래로 볼록한 **볼록 함수**입니다. 따라서 젠센 부등식을 적용할 수 있습니다.
+
+**비음수성 증명:**
 $D_{KL}$은 항상 0 이상입니다. ($-\log$는 볼록 함수)
 
 $$
 \begin{aligned}
-D_{KL}(q||p) &= \mathbb{E}_q \left[ -\log \frac{p(x)}{q(x)} \right] \\
-&\ge -\log \left( \mathbb{E}_q \left[ \frac{p(x)}{q(x)} \right] \right) \\
+D_{KL}(q \parallel p) &= \mathbb{E}_q \left[ -\log \frac{p(x)}{q(x)} \right] \\
+&\ge -\log \left( \mathbb{E}_q \left[ \frac{p(x)}{q(x)} \right] \right) \quad (\text{Jensen Inequality}) \\
 &= -\log \left( \int q(x) \frac{p(x)}{q(x)} dx \right) \\
 &= -\log \left( \int p(x) dx \right) \\
 &= -\log(1) = 0
