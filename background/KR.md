@@ -36,7 +36,7 @@ $$
 우리가 모델을 학습시킬 때의 근본적인 목표는 관측된 데이터 $x$가 등장할 확률 $p_\theta(x)$를 최대화하는 파라미터 $\theta$를 찾는 것입니다.
 
 $$
-\theta^* = \operatorname{argmax}_\theta \sum_{i=1}^N \log p_\theta(x^{(i)})
+\theta^* = \text{argmax}_\theta \sum_{i=1}^N \log p_\theta(x^{(i)})
 $$
 
 하지만 VAE에서는 $p_\theta(x) = \int p_\theta(x|z)p(z)dz$ 적분 계산이 불가능(intractable)하여 이 값을 직접 최대화할 수 없습니다.
