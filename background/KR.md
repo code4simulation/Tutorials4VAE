@@ -4,7 +4,7 @@
 
 ## 1. VAE 소개
 
-VAE는 딥러닝과 확률 모델을 결합한 생성 모델입니다. VAE는 입력 데이터(x)를 잠재 공간(latent space)의 **확률 분포**로 매핑합니다. 이를 통해 VAE는 이 잠재 공간에서 샘플링하여 새로운 데이터를 생성할 수 있습니다.
+VAE는 딥러닝과 확률 모델을 결합한 생성 모델입니다. VAE는 입력 데이터를 잠재 공간(latent space)의 **확률 분포**로 매핑합니다. 이를 통해 VAE는 이 잠재 공간에서 샘플링하여 새로운 데이터를 생성할 수 있습니다.
 
 ## 2. 수학적 배경
 
@@ -162,12 +162,129 @@ $$
 
 이제 $z$는 $\mu$와 $\sigma$에 대한 **함수**가 되었습니다. 따라서 $z$를 $\mu$와 $\sigma$로 미분할 수 있게 되었고($\frac{\partial z}{\partial \mu}=1, \frac{\partial z}{\partial \sigma}=\epsilon$), 역전파가 인코더까지 막힘없이 흐를 수 있게 됩니다. 이것이 VAE 학습을 가능하게 하는 핵심 테크닉입니다.
 
+### 2.8 조건부 VAE (Conditional VAE, CVAE)
+
+기존의 VAE는 강력한 생성 모델이지만, 한 가지 결정적인 한계가 있습니다. 바로 **"생성할 대상을 제어할 수 없다"**는 점입니다. 예를 들어, 숫자 7을 생성하고 싶어도 VAE는 잠재 공간에서 무작위로 샘플링하기 때문에 7이 나올지 9가 나올지 보장할 수 없습니다. 이를 해결하기 위해 제안된 것이 **Conditional VAE (CVAE)**입니다.
+
+**핵심 아이디어: 조건(Condition) $c$의 주입**
+
+CVAE는 인코더와 디코더 모두에게 **조건 정보 $c$ (예: 숫자 레이블)**를 추가로 입력받습니다. 이를 통해 모델은 주어진 조건 하에서 데이터를 생성하고 잠재 변수를 매핑하는 법을 학습합니다.
+
+**수식적 변화:**
+
+모든 확률 분포가 조건 $c$에 종속되도록 변경됩니다.
+
+1.  **인코더 (Encoder)**: $q_\phi(z|x, c)$
+    *   입력: 이미지 $x$ + 레이블 $c$ (Concatenation)
+    *   출력: 잠재 변수 $z$의 분포 파라미터 ($\mu, \sigma$)
+    *   의미: "숫자 7($c$)인 이미지 $x$를 잠재 공간의 어디($z$)에 매핑해야 하는가?"
+
+2.  **디코더 (Decoder)**: $p_\theta(x|z, c)$
+    *   입력: 잠재 변수 $z$ + 레이블 $c$
+    *   출력: 이미지 $x$
+    *   의미: "잠재 변수 $z$와 숫자 7($c$)이라는 정보를 가지고 이미지 $x$를 그려라."
+
+3.  **목적 함수 (CVAE Loss)**:
+    ELBO 식에도 조건 $c$가 추가됩니다.
+    $$
+    \log p(x|c) \ge \mathbb{E}_{q(z|x,c)}[\log p(x|z,c)] - D_{KL}(q(z|x,c) || p(z|c))
+    $$
+    *   보통 Prior $p(z|c)$는 $c$와 무관하게 표준 정규 분포 $\mathcal{N}(0, I)$로 가정합니다. 즉, 어떤 숫자를 그리든 잠재 공간의 분포 자체는 동일한 형태를 유지하도록 합니다.
+
+**구조적 차이점 (Implementation Detail):**
+
+실제 구현(PyTorch)에서는 주로 **One-Hot Encoding**된 레이블 벡터를 이미지나 잠재 변수와 **결합(Concatenate)**하여 사용합니다.
+
+*   **인코더 입력**: `[Batch, 784]` (이미지) + `[Batch, 10]` (레이블) $\rightarrow$ `[Batch, 794]`
+*   **디코더 입력**: `[Batch, 2]` (잠재 변수) + `[Batch, 10]` (레이블) $\rightarrow$ `[Batch, 12]`
+
+이처럼 간단한 구조 변경만으로도, CVAE는 우리가 원하는 특정 숫자(클래스)를 정확하게 생성해낼 수 있는 강력한 제어 능력을 갖게 됩니다.
+
 ## 3. PyTorch 구현 및 분석
 
-우리는 PyTorch를 사용하여 VAE를 구현하고 MNIST 데이터셋에 대해 훈련했습니다. 모델은 다음과 같이 구성됩니다:
-*   **인코더 (Encoder)**: $28 \times 28$ 이미지를 잠재 공간의 평균 $\mu$와 로그 분산 $\log(\sigma^2)$ 벡터로 매핑합니다.
-*   **디코더 (Decoder)**: $z$를 샘플링하고 이미지를 재구성합니다.
-*   **손실 함수 (Loss)**: 이진 교차 엔트로피 (Reconstruction) + KL Divergence.
+## 3. PyTorch 구현 및 분석
+
+우리는 PyTorch를 사용하여 VAE와 CVAE를 구현하고 MNIST 데이터셋에 대해 훈련했습니다. 다음은 `vae_mnist.py`에 구현된 주요 모델 구성 요소에 대한 상세 분석입니다.
+
+### 3.1 모델 아키텍처 (Model Architecture)
+
+#### 인코더 (Encoder)
+인코더는 이미지를 입력받아 잠재 공간의 파라미터인 평균($\mu$)과 로그 분산($\log \sigma^2$)을 출력합니다.
+*   **VAE**: $28 \times 28$ 이미지를 평탄화(Flatten)하여 입력받습니다.
+*   **CVAE**: 이미지와 One-Hot 인코딩된 레이블을 **결합(Concatenate)**하여 입력받습니다.
+
+```python
+# CVAE Encoder Implementation
+class CVAE(nn.Module):
+    def __init__(self, latent_dim: int = 2, num_classes: int = 10):
+        super(CVAE, self).__init__()
+        # 입력 차원: 이미지(784) + 클래스 레이블(10)
+        self.fc1 = nn.Linear(28 * 28 + num_classes, 400)
+        self.fc2_mu = nn.Linear(400, latent_dim)
+        self.fc2_logvar = nn.Linear(400, latent_dim)
+
+    def encode(self, x: torch.Tensor, c: torch.Tensor):
+        # 이미지(x)와 레이블(c)을 결합
+        inputs = torch.cat([x, c], 1)
+        h1 = F.relu(self.fc1(inputs))
+        return self.fc2_mu(h1), self.fc2_logvar(h1)
+```
+
+#### 재파라미터화 (Reparameterization Trick)
+역전파(Backpropagation)가 가능하도록 무작위성을 분리하는 핵심 부분입니다. 로그 분산(`logvar`)을 사용하는 이유는 분산이 항상 양수여야 한다는 제약을 자연스럽게 만족시키기 위함입니다 ($\sigma = e^{0.5 \times \log\sigma^2}$).
+
+```python
+    def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor):
+        std = torch.exp(0.5 * logvar)  # 표준편차 복원
+        eps = torch.randn_like(std)    # 표준정규분포에서 노이즈 샘플링
+        return mu + eps * std          # z = mu + epsilon * sigma
+```
+
+#### 디코더 (Decoder)
+잠재 변수 $z$로부터 원본 이미지를 복원합니다.
+*   **CVAE**: 인코더와 마찬가지로 $z$와 레이블 $c$를 결합하여 입력받습니다. 이를 통해 모델은 "어떤 숫자($c$)를 그려야 하는지" 알 수 있습니다.
+
+```python
+    def decode(self, z: torch.Tensor, c: torch.Tensor):
+        # 잠재 변수(z)와 레이블(c)을 결합
+        inputs = torch.cat([z, c], 1)
+        h3 = F.relu(self.fc3(inputs))
+        return torch.sigmoid(self.fc4(h3)) # 픽셀 값을 0~1 사이 확률로 출력
+```
+
+### 3.2 손실 함수 (Loss Function)와 KL Annealing
+
+손실 함수는 **Reconstruction Loss (BCE)**와 **Regularization Loss (KLD)**의 합으로 정의됩니다.
+특히 초기 학습 안정화를 위해 **KL Annealing** 기법이 적용되어 있습니다. `beta` 값은 0에서 시작하여 1까지 점진적으로 증가하며, 이는 초기에 모델이 복원(Reconstruction)에 집중하도록 돕습니다.
+
+```python
+def loss_function(recon_x, x, mu, logvar, beta=1.0):
+    # 1. Reconstruction Loss: 입력과 복원 이미지 간의 차이 (Binary Cross Entropy)
+    bce = F.binary_cross_entropy(recon_x, x.view(-1, 28 * 28), reduction='sum')
+    
+    # 2. KL Divergence: 잠재 분포와 표준정규분포 간의 차이
+    # 공식: -0.5 * sum(1 + log(sigma^2) - mu^2 - sigma^2)
+    kld = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    
+    # Beta를 곱해 KLD의 영향력을 조절 (Annealing)
+    return bce + beta * kld
+```
+
+### 3.3 가중치 초기화 (Weight Initialization)
+
+Latent Space의 초기 분포가 엉뚱한 곳으로 튀는 것을 방지하기 위해, 잠재 변수와 연결된 레이어(`fc2_mu`, `fc2_logvar`)에 대해 **특수한 초기화**를 적용했습니다. 이를 통해 초기 $z$ 분포가 표준 정규 분포 $N(0, I)$에 가깝게 시작하도록 유도합니다.
+
+```python
+    def initialize_weights(self):
+        # ... (일반 레이어는 Xavier 초기화) ...
+        
+        # Latent 파라미터는 매우 작은 값으로 초기화
+        # 결과적으로 mu ~= 0, logvar ~= 0 (sigma ~= 1)이 됨
+        nn.init.normal_(self.fc2_mu.weight, 0, 0.01)
+        nn.init.constant_(self.fc2_mu.bias, 0)
+        nn.init.normal_(self.fc2_logvar.weight, 0, 0.01)
+        nn.init.constant_(self.fc2_logvar.bias, 0)
+```
 
 ## 4. 결과 (Results)
 
