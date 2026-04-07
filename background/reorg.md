@@ -47,10 +47,28 @@ $$
 *   **$p(x)$ (증거, Evidence / 주변 우도, Marginal Likelihood)**:
     관측된 데이터 $x$가 발생할 전체 확률을 의미하며, 모든 가능한 잠재 변수 $z$에 대해 우도와 사전 확률의 곱을 적분한 값($p(x) = \int p(x|z)p(z)dz$)과 같다. 고차원 잠재 공간에서는 이 적분 계산이 불가능(Intractable)하므로 사후 확률 $p(z|x)$를 직접 구할 수 없다. 이를 직접 계산하는 대신 ELBO(Evidence Lower Bound)를 최대화하는 우회 경로를 선택한다.
 
-### 2.2. 변분 추론 (Variational Inference)
+### 2.2. 최대 우도 추정 (Maximum Likelihood Estimation, MLE)
+
+앞서 언급한 MLE의 구체적인 최적화 목표는 다음과 같다. $N$개의 관측 데이터에 대해 모델이 이 데이터들을 생성했을 로그 우도 합을 최대화하는 파라미터 $\theta$를 찾는 것이다.
+
+$$
+\theta^* = \text{argmax}_\theta \sum_{i=1}^N \log p_\theta(x^{(i)})
+$$
+
+단순 확률 대신 로그 확률을 최대화하는 이유는 수치적 안정성에 있다. 확률값($0 \le p \le 1$)의 연속적인 곱셈은 0으로 수렴하는 언더플로우(Underflow)를 유발하나, 로그를 취하면 곱셈이 덧셈으로 변환된다. 로그 함수는 단조 증가 함수이므로, 로그 우도를 최대화하는 것은 원본 우도를 최대화하는 것과 수학적으로 동치이다.
+
+그러나 VAE와 같은 잠재 변수 모델에서는 $p_\theta(x)$를 직접 계산하기 위해 모든 가능한 $z$에 대한 적분이 필요하며, 이는 고차원 공간에서 계산 불가능(Intractable)하다.
+
+$$
+p_\theta(x) = \int p_\theta(x|z)p(z)dz
+$$
+
+따라서 로그 우도를 직접 최대화하는 대신, 그 하한(Lower Bound)인 **ELBO**를 최대화하는 방향으로 문제를 재구성한다.
+
+### 2.3. 변분 추론 (Variational Inference)
 직접 계산이 불가능한 $p(z|x)$를 대신하기 위해, 다루기 쉬운 근사 분포 $q_{\phi}(z|x)$를 도입한다. 이 $q_{\phi}$는 신경망(인코더)으로 모델링된다. 변분 추론의 목표는 근사 분포 $q_{\phi}(z|x)$를 실제 사후 확률 $p(z|x)$에 최대한 가깝게 만드는 것, 즉 두 분포 사이의 쿨백-라이블러 발산 (Kullback-Leibler Divergence, KLD)를 최소화하는 파라미터 $\phi$를 찾는 것이다.
 
-### 2.3. ELBO (Evidence Lower Bound) 상세 유도
+### 2.4. ELBO (Evidence Lower Bound) 상세 유도
 로그 우도 $\log p(x)$를 최대화하는 문제는 수학적 전개를 통해 ELBO를 최대화하는 문제로 치환된다.
 
 $$
@@ -69,7 +87,7 @@ $$
 
 즉, $\log p(x)$를 최대화하는 것은 ELBO를 최대화하는 것과 같으며, 이는 **Reconstruction Error를 줄이고(첫 번째 항)**, **잠재 분포가 사전 분포와 유사해지도록 정규화(두 번째 항)**하는 과정이다.
 
-### 2.4. Kullback-Leibler Divergence (KLD)
+### 2.5. Kullback-Leibler Divergence (KLD)
 KLD는 두 확률 분포의 차이를 측정하는 지표로, 항상 0 이상의 값을 가진다(Gibbs' inequality).
 $$ D_{KL}(q \parallel p) = \mathbb{E}_{q} \left[ \log \frac{q(x)}{p(x)} \right] $$
 VAE에서는 인코더가 출력하는 분포 $q_\phi(z|x)$가 사전 분포 $p(z)$인 표준 정규분포 $\mathcal{N}(0, I)$와 얼마나 가까운지를 측정하여 Loss에 반영한다.
